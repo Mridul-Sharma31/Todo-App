@@ -1,6 +1,7 @@
 import express from "express";
 import { registerUser } from "./controllers/user.controller.js";
 import { logger } from "./utils/index.js";
+import { globalErrorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 
@@ -23,5 +24,13 @@ import userRouter from "./routes/user.routes.js";
 
 //*********** router declaration ********
 app.use("/api/v1/users" , userRouter)
+
+
+
+
+
+
+
+app.use(globalErrorHandler);
 
 export { app };

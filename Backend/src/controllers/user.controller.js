@@ -1,40 +1,52 @@
 import { User } from "../models/user.model.js";
 import { logger } from "../utils/logger.js";
+import {apiError} from "../utils/apiError.js"
+import {apiResponse} from "../utils/apiResponse.js"
 
-const registerUser = async (req, res) => {
-    const { email, name, username, password } = req.body;
 
-    console.log(email, name, username, password);
+const registerUser = async (req,res,next) => {
+    
+    try{
+        const { email, name, username, password } = req.body;
 
-    if (
-        !email?.trim() ||
-        !username?.trim() ||
-        !name?.trim() ||
-        !password?.trim()
-    ) {
-        return res.status(400).json({ error: "All fields are required" });
-    }
+        if( 
+            [email,name,username,password].some( (field) => !field)
+                
+        ){
+            throw new apiError(400, "all fields are req");
+        }
+        
+        const existedUser = await User.findOne(
+            {
+                $or: [ {username} , {email}]
+            }
+        )
 
-    if (await User.findOne({ username })) {
-        return res
-            .status(400)
-            .json({ error: "User with the same username already exists" });
-    }
+        if(existedUser){
+            throw new apiError(409, "user already exists")
+        }
 
-    if (await User.findOne({ email })) {
-        return res
-            .status(400)
-            .json({ error: "User with the same email already exists" });
-    }
-
-    res.status(200).json(
-        await User.create({
+        const user = await User.create({
             username,
             email,
-            name,
             password,
-        }),
-    );
-};
+            name
+        })
+
+        const createdUser = await User.findById(user._id).select("-password");
+
+        if(!createdUser){
+            throw new apiError(500, "error while registering the user")
+        }
+
+        return res.status(201).json(
+            new apiResponse(201,createdUser )
+        )
+    }
+    
+    catch (error){
+        next(error);
+    }
+}
 
 export { registerUser };
