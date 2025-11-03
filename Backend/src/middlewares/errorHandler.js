@@ -1,6 +1,6 @@
 import { apiError } from "../utils/apiError.js";
 
-
+//* next(param)
 export const globalErrorHandler = (err, req, res, next) => {
 
     if (err instanceof apiError) {
