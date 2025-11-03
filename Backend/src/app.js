@@ -5,18 +5,8 @@ import { globalErrorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 
-// Middleware for accepting json
+//* Middleware 
 app.use(express.json({ limit: "32kb" }));
-
-// app.post("/register", (req, res) => {
-//     console.log("Req : ", req.body);
-
-//     registerUser(req , res)
-//         .catch((err) => {
-//             logger.error( "Error /register" ,  err);
-//             res.status(400).json(err);
-//         });
-// });
 
 //*********** importing router **********
 import userRouter from "./routes/user.routes.js";
@@ -31,6 +21,8 @@ app.use("/api/v1/users" , userRouter)
 
 
 
+
+//! this should be at the end to function properly
 app.use(globalErrorHandler);
 
 export { app };
