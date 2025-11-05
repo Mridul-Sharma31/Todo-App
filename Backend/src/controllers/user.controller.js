@@ -239,7 +239,7 @@ const changeCurrentPassword = async (req,res,next) => {
         .clearCookie("accessToken",options)
         .clearCookie("refreshToken",options)
         .json(
-            new apiResponse(200,"password changed successfully",{})
+            new apiResponse(200,{},"password changed successfully")
         )
 
     } catch (error) {
