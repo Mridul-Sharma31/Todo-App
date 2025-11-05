@@ -203,4 +203,50 @@ const getUserProfile = async (req,res,next) => {
     )
 };
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, getUserProfile};
+const changeCurrentPassword = async (req,res,next) => {
+
+    try {
+        const user = await User.findById(req.user?._id).select("+password");
+
+        const {oldPassword , newPassword} = req.body;
+        
+        if(!oldPassword || !newPassword){
+            throw new apiError(400 , "both fields are required");
+        }
+
+        if(oldPassword === newPassword){
+            throw new apiError (400, "new password cannot be same as old password")
+        }
+
+        const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+        if(!isPasswordCorrect){
+            throw new apiError(401, "plz enter valid password");
+        }
+        
+        user.password = newPassword;
+        await user.save();
+
+        user.refreshToken = undefined;
+        await user.save({validateBeforeSave:false});
+
+        const options = {
+            httpOnly:true,
+            secure:true
+        }
+
+        return res.status(200)
+        .clearCookie("accessToken",options)
+        .clearCookie("refreshToken",options)
+        .json(
+            new apiResponse(200,"password changed successfully",{})
+        )
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, getUserProfile,changeCurrentPassword};
