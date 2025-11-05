@@ -1,5 +1,5 @@
 import {Router} from "express"
-import {logoutUser, refreshAccessToken, registerUser} from "../controllers/user.controller.js"
+import {logoutUser, refreshAccessToken, registerUser,getUserProfile} from "../controllers/user.controller.js"
 import { loginUser } from "../controllers/user.controller.js";
 import {verifyJWT} from "../middlewares/authMiddleware.js"
 
@@ -9,8 +9,13 @@ router.route("/register").post(registerUser)
 
 router.route("/login").post(loginUser)
 
+router.route("/refreshToken").post(refreshAccessToken)
+
+//* secured routes
 router.route("/logout").post(verifyJWT,logoutUser);
 
-router.route("/refreshToken").post(refreshAccessToken)
+router.route("/me").get(verifyJWT,getUserProfile);
+
+// router.route("/change-password").post(verifyJWT,changeCurrentPassword);
 
 export default router

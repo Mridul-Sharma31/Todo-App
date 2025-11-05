@@ -193,4 +193,14 @@ const refreshAccessToken = async (req, res, next) => {
     }
 };
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken};
+const getUserProfile = async (req,res,next) => {
+
+    const user = req.user;
+
+    return res.status(200)
+    .json(
+        new apiResponse(200,user,"fetched curr user successfully")
+    )
+};
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, getUserProfile};
