@@ -182,7 +182,6 @@ const refreshAccessToken = async (req, res, next) => {
                     200,
                     {
                         accessToken,
-                        refreshToken: newRefreshToken,
                     },
                     "Access token refreshed"
                 )
