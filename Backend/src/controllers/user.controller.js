@@ -5,6 +5,7 @@ import { apiResponse } from "../utils/apiResponse.js";
 import { verifyJWT } from "../middlewares/authMiddleware.js";
 import jwt from "jsonwebtoken"
 
+
 const registerUser = async (req, res, next) => {
     try {
         const { email, name, username, password } = req.body;
@@ -208,7 +209,8 @@ const changeCurrentPassword = async (req,res,next) => {
 
         const {oldPassword , newPassword} = req.body;
         
-        if(!oldPassword || !newPassword){
+        if(!oldPassword || oldPassword.trim() === "" ||
+            !newPassword || newPassword.trim() === ""){
             throw new apiError(400 , "both fields are required");
         }
 
@@ -245,85 +247,139 @@ const changeCurrentPassword = async (req,res,next) => {
     }
 } 
 
-const updateAccountDetails = async (req, res, next) => {
-    try {
-        let { name, email } = req.body;
+const updateName = async(req,res,next) => {
+    //! will use same controller for future avtar and bio updation
+try {
+        const {name} = req.body;
         
-        if (!name && !email) {
-            throw new apiError(400, "One field is required");
+        if(!name || name.trim() === ""){
+            throw new apiError(400, "Name cannot be empty");
         }
-        
-        const user = await User.findById(req.user._id);
-        
-        let emailChanged = false;
-        
+    
+        const user = req.user;
+    
         if (name) {
             if (name === user.name) {
-                throw new apiError(400, "New name cannot be same");
+                throw new apiError(400, "New name can't be same as existing name");
             }
             user.name = name;
         }
         
-        if (email) {
-            email = email.trim().toLowerCase();
-            if (email === user.email) {
-                throw new apiError(400, "New email cannot be same");
-            }
-            
-            // Proactive check
-            const emailExists = await User.findOne({
-                email: email,
-                _id: { $ne: user._id }
-            });
-            
-            if (emailExists) {
-                throw new apiError(409, "Email already in use");
-            }
-            
-            user.email = email;  
-            emailChanged = true;
-        }
-        
-        if(emailChanged) {
-            user.refreshToken = undefined;
-        }
-        // ONE save for everything!
-        await user.save();
-        
-        const options = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production'
-        };
-
-        if (emailChanged) {
-            return res
-                .status(200)
-                .clearCookie("accessToken", options)
-                .json(new apiResponse(200, {}, "Please login again"));
-        }
+        const updatedUser = await user.save();
         
         const userResponse = {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            username: user.username,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
-        };
-        
-        return res.status(200).json(
-            new apiResponse(200, userResponse, "Updated successfully")
-        );
-        
-    } catch (error) {
-        // Better error detection
-        if (error.code === 11000) {
-            console.log("Duplicate key:", error.keyPattern, error.keyValue);
-            return next(new apiError(409, "Duplicate value"));
+            _id:updatedUser._id,
+            name:updatedUser.name,
+            username:updatedUser.username,
+            email:updatedUser.email,
+            createdAt:updatedUser.createdAt,
+            updatedAt:updatedUser.updatedAt
         }
+
+        return res.status(200)
+        .json(new apiResponse(200,userResponse,"User account details updated successfully"));
+
+} catch (error) {
+
+    next(error);
+}
+}
+
+const checkUniqueUsername = async (req,res,next) =>{
+    try {
         
+        const {username} = req.query;
+
+        if (typeof username!== 'string' || username.trim() === "") {
+            return next(new apiError(400, "Username is required"));
+        }
+
+        const existingUsername = await User.findOne({
+            username:username.toLowerCase().trim()
+        })
+
+        if (existingUsername) {
+            throw new apiError(409,"Username already taken, please enter a unique username")
+        }
+
+        return res.status(200).json(
+            new apiResponse(200, { available: true }, "Username is available")
+        );
+
+    } catch (error) {
         next(error);
     }
-};
+}
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, getUserProfile,changeCurrentPassword, updateAccountDetails};
+const updateUsernameAndEmail = async (req,res,next) => {
+try {
+    
+        const {username , email, password} = req.body;
+    
+        if(typeof password!=="string" || password.trim() === ""){
+            throw new apiError(400,"password is required for changing email and username");
+        }   
+
+        const user = await User.findById(req.user._id).select("+password");
+
+        const validPassword = await user.isPasswordCorrect(password);
+    
+        if(!validPassword){
+            throw new apiError (401 , "please enter a correct password");
+        }
+
+        if(username && typeof username==="string" && username.trim()!==""){
+            const cleanUsername = username.trim().toLowerCase();
+            if(cleanUsername===user.username){
+                throw new apiError(400, "please enter a new username");
+            }
+            user.username = cleanUsername;
+        }
+    
+        if(email && typeof email==="string" && email.trim()!==""){
+            const cleanEmail = email.trim().toLowerCase();
+            if(cleanEmail===user.email){
+                throw new apiError(400,"please enter a new email");
+            }
+            user.email=cleanEmail;
+        }
+        
+        //security reason -
+        user.refreshToken = undefined;
+        await user.save();
+        
+        const userResponse = {
+            _id:user._id,
+            name:user.name,
+            username:user.username,
+            email:user.email,
+            createdAt:user.createdAt,
+            updatedAt:user.updatedAt
+        }
+
+        const options = {
+            httpOnly:true,
+            secure:true
+        }
+
+        return res.status(200)
+              .clearCookie("accessToken",options)
+              .clearCookie("refreshToken",options)
+              .json(new apiResponse(200,userResponse,"account details updated successfully"));     
+} catch (error) {
+
+    if (error.code === 11000) {
+      
+        if (error.keyPattern && error.keyPattern.username) {
+            return next(new apiError(409, "This username is already taken"));
+        }
+        if (error.keyPattern && error.keyPattern.email) {
+            return next(new apiError(409, "This email is already in use"));
+        }
+    }
+
+    next(error);
+}
+}
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, getUserProfile,changeCurrentPassword, updateName, checkUniqueUsername,updateUsernameAndEmail};

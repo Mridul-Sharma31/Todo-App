@@ -35,7 +35,6 @@ const user = new Schema(
         password: {
             type: String,
             required: true,
-            trim: true,
         },
         refreshToken: {
             type: String 
@@ -77,6 +76,7 @@ user.methods.generateRefreshToken = function () {
         },
         process.env.REFRESH_TOKEN_SECRET,
         {
+
             expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
         },
     );

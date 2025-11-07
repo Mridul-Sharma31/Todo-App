@@ -1,3 +1,4 @@
+
 import express from "express";
 import { globalErrorHandler } from "./middlewares/errorHandler.js";
 import cookieParser from "cookie-parser"
@@ -7,6 +8,7 @@ const app = express();
 //* Middleware
 app.use(express.json({ limit: "32kb" }));
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 //*********** importing router **********
 import userRouter from "./routes/user.routes.js";
