@@ -22,7 +22,7 @@ export const verifyJWT = async (req,res,next) => {
             throw new apiError(401, "Invalid token");  // All other JWT errors
         }
 
-       const user = await User.findById(decodedToken._id).select("-password -refreshToken");
+       const user = await User.findById(decodedToken._id).select("-password -refreshToken"); //* attach user to the req which is being sent further to the controllers
    
        if(!user){
            throw new apiError(404, "user not found:invalid access token");
