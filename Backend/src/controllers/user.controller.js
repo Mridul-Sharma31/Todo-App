@@ -1,4 +1,5 @@
 import { User } from "../models/user.model.js";
+import {Project} from "../models/project.model.js"
 import { logger } from "../utils/logger.js";
 import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
@@ -29,13 +30,26 @@ const registerUser = async (req, res, next) => {
             name,
         });
 
-        const createdUser = await User.findById(user._id).select("-password");
-
-        if (!createdUser) {
-            throw new apiError(500, "error while registering the user");
+        //* Automatically create the Inbox for the new user
+        // This ensures every user starts with a valid "Inbox" project , must be wrapped in another try catch block to rollback
+        try {
+            await Project.create({
+                name: "Inbox",
+                owner: user._id,
+                isInbox: true,
+                order: 0
+            });
+        } catch (inboxError) {
+            // Inbox failed → Rollback user creation , its like implementing manual transaction, if one fails other must fail too
+            await User.findByIdAndDelete(user._id);
+            throw new apiError(500, "Failed to setup account. Please try again.");
         }
 
-        return res.status(201).json(new apiResponse(201, createdUser));
+        const userResponse = user.toObject();
+        delete userResponse.password;
+        delete userResponse.refreshToken;
+
+        return res.status(201).json(new apiResponse(201, userResponse));
     } 
     catch (error) {
         next(error);
@@ -313,7 +327,7 @@ const checkUniqueUsername = async (req,res,next) =>{
 
 const updateUsernameAndEmail = async (req,res,next) => {
 try {
-    
+        //* we use username and email as a login so we dont want any unverified entity to come and change it 
         const {username , email, password} = req.body;
     
         if(typeof password!=="string" || password.trim() === ""){
@@ -344,7 +358,7 @@ try {
             user.email=cleanEmail;
         }
         
-        //security reason -
+        //* security reason - we ask to login again because we have changed the credentials of the user in the db
         user.refreshToken = undefined;
         await user.save();
         

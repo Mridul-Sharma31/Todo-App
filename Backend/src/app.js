@@ -12,9 +12,11 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 //*********** importing router **********
 import userRouter from "./routes/user.routes.js";
+import projectRouter from "./routes/project.route.js"
 
 //*********** router declaration ********
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/project" , projectRouter);
 
 //! this should be at the end to function properly
 app.use(globalErrorHandler);

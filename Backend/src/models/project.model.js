@@ -36,7 +36,6 @@ const projectSchema = new Schema(
 );
 
 projectSchema.index(
-  { owner: 1 },
   { unique: true, partialFilterExpression: { isInbox: true } } //* partial indexing - for making sure i have only one inbox for each user
 );
 
